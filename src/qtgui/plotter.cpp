@@ -346,21 +346,24 @@ void CPlotter::mouseMoveEvent(QMouseEvent* event)
             // pan viewable range or move center frequency
             int delta_px = m_Xzero - pt.x();
             qint64 delta_hz = delta_px * m_Span / (m_OverlayPixmap.width() / m_DPR);
-            if (event->buttons() & Qt::MidButton)
+            if (delta_hz != 0) // update m_Xzero only on real change
             {
-                m_CenterFreq += delta_hz;
-                m_DemodCenterFreq += delta_hz;
-                emit newDemodFreq(m_DemodCenterFreq, m_DemodCenterFreq - m_CenterFreq);
-            }
-            else
-            {
-                setFftCenterFreq(m_FftCenter + delta_hz);
-            }
-            updateOverlay();
+                if (event->buttons() & Qt::MidButton)
+                {
+                    m_CenterFreq += delta_hz;
+                    m_DemodCenterFreq += delta_hz;
+                    emit newDemodFreq(m_DemodCenterFreq, m_DemodCenterFreq - m_CenterFreq);
+                }
+                else
+                {
+                    setFftCenterFreq(m_FftCenter + delta_hz);
+                }
+                updateOverlay();
 
-            m_PeakHoldValid = false;
+                m_PeakHoldValid = false;
 
-            m_Xzero = pt.x();
+                m_Xzero = pt.x();
+            }
         }
     }
     else if (LEFT == m_CursorCaptured)
