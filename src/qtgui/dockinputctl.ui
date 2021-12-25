@@ -176,7 +176,10 @@
          <string> ppm</string>
         </property>
         <property name="decimals">
-         <number>1</number>
+         <number>3</number>
+        </property>
+        <property name="singleStep">
+         <double>0.01</double>
         </property>
         <property name="minimum">
          <double>-500.000000000000000</double>
