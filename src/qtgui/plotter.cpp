@@ -725,26 +725,46 @@ void CPlotter::mouseReleaseEvent(QMouseEvent * event)
 void CPlotter::zoomStepX(float step, int x)
 {
     // calculate new range shown on FFT
-    float new_range = qBound(10.0f, m_Span * step, m_SampleFreq * 10.0f);
+    double new_range = qBound(10.0, m_Span * (double)step, m_SampleFreq * 10.0);
 
     // Frequency where event occurred is kept fixed under mouse
-    float ratio = (float)x / (float)width();
-    float fixed_hz = freqFromX(x);
-    float f_max = fixed_hz + (1.0 - ratio) * new_range;
-    float f_min = f_max - new_range;
+    double ratio = (double)x / (double)width();
+    qint64 fixed_hz = freqFromX(x);
+    double f_max = fixed_hz + (1.0 - ratio) * new_range;
+    double f_min = f_max - new_range;
 
     // ensure we don't go beyond the rangelimits
-    if (f_min < m_CenterFreq - m_SampleFreq / 2.f)
-        f_min = m_CenterFreq - m_SampleFreq / 2.f;
+    bool limit_hit = false;
+    double lolim = m_CenterFreq - m_SampleFreq / 2.0;
+    double hilim = m_CenterFreq + m_SampleFreq / 2.0;
+    if (f_min < lolim)
+    {
+        f_min = lolim;
+        limit_hit = true;
+    }
+    if (f_max > hilim)
+    {
+        f_max = hilim;
+        limit_hit = true;
+    }
 
-    if (f_max > m_CenterFreq + m_SampleFreq / 2.f)
-        f_max = m_CenterFreq + m_SampleFreq / 2.f;
-    new_range = f_max - f_min;
+    // the final new span
+    quint32 new_span = (quint32)(f_max - f_min);
 
-    auto fc = (qint64)(f_min + (f_max - f_min) / 2.0);
-
-    setFftCenterFreq(fc - m_CenterFreq);
-    setSpanFreq((quint32)new_range);
+    // find new FFT center frequency
+    qint64 new_FftCenter;
+    if( limit_hit ) // cannot keep fixed_hz fixed
+    {
+    	new_FftCenter = qRound64((f_min + f_max) / 2.0) - m_CenterFreq;
+    }
+    else // calculate new FFT center frequency that really keeps fixed_hz fixed
+    {
+    	// Formula must match calculation in freqFromX(x)!
+    	qint64 wouldbe_hz = m_CenterFreq + m_FftCenter - new_span / 2.0 + ratio * new_span;
+    	new_FftCenter = m_FftCenter + (fixed_hz - wouldbe_hz);
+    }
+    setFftCenterFreq(new_FftCenter);
+    setSpanFreq(new_span);
 
     float factor = (float)m_SampleFreq / (float)m_Span;
     emit newZoomLevel(factor);
@@ -1554,9 +1574,9 @@ int CPlotter::xFromFreq(qint64 freq)
 // Convert from screen coordinate to frequency
 qint64 CPlotter::freqFromX(int x)
 {
-    qint64 w = width();
-    qint64 StartFreq = m_CenterFreq + m_FftCenter - m_Span / 2;
-    qint64 f = StartFreq + m_Span * (qint64) x / w;
+    double ratio = (double)x / (double)width();
+    // Also adapt zoomStepX(...) when this formula is changed!
+    qint64 f = m_CenterFreq + m_FftCenter - m_Span / 2.0 + ratio * m_Span;
     return f;
 }
 
