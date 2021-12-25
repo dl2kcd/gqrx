@@ -146,7 +146,7 @@ CPlotter::CPlotter(QWidget *parent) : QFrame(parent)
     m_HdivDelta = 70;
     m_BandPlanHeight = 22;
 
-    m_FreqDigits = 3;
+    m_FreqDigits = 6;
 
     m_Peaks = QMap<int,int>();
     setPeakDetection(false, 2);
@@ -230,7 +230,7 @@ void CPlotter::mouseMoveEvent(QMouseEvent* event)
                 if (m_TooltipsEnabled)
                     QToolTip::showText(event->globalPos(),
                                        QString("Demod: %1 kHz")
-                                               .arg(m_DemodCenterFreq/1.e3f, 0, 'f', 3),
+                                               .arg(m_DemodCenterFreq/1.e3, 0, 'f', 3),
                                        this);
             }
             else if (isPointCloseTo(pt.x(), m_DemodHiCutFreqX, m_CursorCaptureDelta))
@@ -267,7 +267,7 @@ void CPlotter::mouseMoveEvent(QMouseEvent* event)
                 if (m_TooltipsEnabled)
                 {
                     qint64 hoverFrequency = freqFromX(pt.x());
-                    QString toolTipText = QString("F: %1 kHz").arg(hoverFrequency/1.e3f, 0, 'f', 3);
+                    QString toolTipText = QString("F: %1 kHz").arg(hoverFrequency/1.e3, 0, 'f', 3);
                     QFontMetrics metrics(m_Font);
                     int bandTopY = (m_OverlayPixmap.height() / m_DPR) - metrics.height() - 2 * VER_MARGIN - m_BandPlanHeight;
                     QList<BandInfo> hoverBands = BandPlan::Get().getBandsEncompassing(hoverFrequency);
@@ -302,7 +302,7 @@ void CPlotter::mouseMoveEvent(QMouseEvent* event)
             QToolTip::showText(event->globalPos(),
                                QString("%1\n%2 kHz")
                                        .arg(tt.toString("yyyy.MM.dd hh:mm:ss.zzz"))
-                                       .arg(freqFromX(pt.x())/1.e3f, 0, 'f', 3),
+                                       .arg(freqFromX(pt.x())/1.e3, 0, 'f', 3),
                                this);
         }
     }
@@ -1491,7 +1491,7 @@ void CPlotter::drawOverlay()
 void CPlotter::makeFrequencyStrs()
 {
     qint64  StartFreq = m_StartFreqAdj;
-    float   freq;
+    double  freq;
     int     i,j;
 
     if ((1 == m_FreqUnits) || (m_FreqDigits == 0))
@@ -1499,7 +1499,7 @@ void CPlotter::makeFrequencyStrs()
         // if units is Hz then just output integer freq
         for (i = 0; i <= m_HorDivs; i++)
         {
-            freq = (float)StartFreq/(float)m_FreqUnits;
+            freq = (double)StartFreq/(double)m_FreqUnits;
             m_HDivText[i].setNum((int)freq);
             StartFreq += m_FreqPerDiv;
         }
@@ -1509,7 +1509,7 @@ void CPlotter::makeFrequencyStrs()
     // so create max sized text based on frequency units
     for (i = 0; i <= m_HorDivs; i++)
     {
-        freq = (float)StartFreq / (float)m_FreqUnits;
+        freq = (double)StartFreq / (double)m_FreqUnits;
         m_HDivText[i].setNum(freq,'f', m_FreqDigits);
         StartFreq += m_FreqPerDiv;
     }
@@ -1532,7 +1532,7 @@ void CPlotter::makeFrequencyStrs()
     StartFreq = m_StartFreqAdj;
     for (i = 0; i <= m_HorDivs; i++)
     {
-        freq = (float)StartFreq/(float)m_FreqUnits;
+        freq = (double)StartFreq/(double)m_FreqUnits;
         m_HDivText[i].setNum(freq,'f', max);
         StartFreq += m_FreqPerDiv;
     }
