@@ -751,8 +751,12 @@ void CPlotter::zoomStepX(float step, int x)
         limit_hit = true;
     }
 
-    // the final new span
+    // the new span
     quint32 new_span = (quint32)(f_max - f_min);
+    if( new_span & 1 )
+    {
+        new_span++; // keep span even to avoid rounding in span/2
+    }
 
     // find new FFT center frequency
     qint64 new_FftCenter;
@@ -763,7 +767,7 @@ void CPlotter::zoomStepX(float step, int x)
     else // calculate new FFT center frequency that really keeps fixed_hz fixed
     {
     	// Formula must match calculation in freqFromX(x)!
-    	qint64 wouldbe_hz = m_CenterFreq + m_FftCenter - new_span / 2.0 + ratio * new_span;
+    	qint64 wouldbe_hz = (m_CenterFreq + m_FftCenter - new_span / 2) + ratio * new_span;
     	new_FftCenter = m_FftCenter + (fixed_hz - wouldbe_hz);
     }
     setFftCenterFreq(new_FftCenter);
@@ -1579,7 +1583,7 @@ qint64 CPlotter::freqFromX(int x)
 {
     double ratio = (double)x / (double)width();
     // Also adapt zoomStepX(...) when this formula is changed!
-    qint64 f = m_CenterFreq + m_FftCenter - m_Span / 2.0 + ratio * m_Span;
+    qint64 f = (m_CenterFreq + m_FftCenter - m_Span / 2) + ratio * m_Span;
     return f;
 }
 
