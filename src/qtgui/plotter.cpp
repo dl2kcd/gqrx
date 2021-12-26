@@ -1174,8 +1174,13 @@ void CPlotter::getScreenIntegerFFTData(qint32 plotHeight, qint32 plotWidth,
     else
     {
         // more plot points than FFT points
+        double fftstep = (double)m_SampleFreq / (double)m_FFTSize; // FFT frequency bin width
         for (i = 0; i < plotWidth; i++)
-            m_pTranslateTbl[i] = m_BinMin + (i*(m_BinMax - m_BinMin)) / plotWidth;
+        {
+            double ratio = (double)i / (double)plotWidth;
+            double freq = startFreq + ratio * (stopFreq - startFreq);
+            m_pTranslateTbl[i] = qint32(m_FFTSize / 2 + freq / fftstep + 0.5);
+        }
         *xmin = 0;
         *xmax = plotWidth;
     }
