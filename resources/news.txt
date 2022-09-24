@@ -1,8 +1,55 @@
 
-    2.15.2: In progress...
+    2.15.9: Released April 9, 2022
 
+       NEW: Qt 6 support.
+     FIXED: Slider widgets don't work correctly on MacOS Monterey.
+
+
+    2.15.8: Released January 25, 2022
+
+     FIXED: Crash when DSP is restarted after a long pause.
+     FIXED: Remove usage of deprecated Qt APIs.
+     FIXED: Return correct RDS status in remote control.
+  IMPROVED: Allow ordinary IP addresses to be used in remote control settings.
+
+
+    2.15.7: Released January 23, 2022
+
+     FIXED: Errors & warnings in appstream metadata & desktop entry.
+
+
+    2.15.6: Released January 22, 2022
+
+  IMPROVED: Install icon, desktop entry, and appstream metadata.
+
+
+    2.15.5: Released January 20, 2022
+
+     FIXED: Use correct categories in desktop entry file.
+
+
+    2.15.4: Released January 15, 2022
+
+     FIXED: Audio is delayed when FFT size is changed.
+
+
+    2.15.3: Released January 15, 2022
+
+     FIXED: RDS receiver skips some messages.
+     FIXED: Buffer overruns in AFSK1200 decoder.
+     FIXED: Crash when opening APSK1200 decoder with demod off.
+  IMPROVED: FFT and S-meter performance.
+  IMPROVED: Reduced FFT memory usage.
+  IMPROVED: Increased S-meter resolution to 0.1 dB.
+  IMPROVED: Accuracy of S-meter display.
+
+
+    2.15.2: Released January 8, 2022
+
+       NEW: Save & restore center frequency when playing I/Q files.
      FIXED: Device selection fails for some SoapySDR devices.
      FIXED: Segfault when starting AppImage on some systems.
+     FIXED: Crash/freeze after stopping audio recorder or AFSK1200 decoder.
   IMPROVED: Frequency accuracy of plots at high zoom levels.
 
 

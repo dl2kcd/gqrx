@@ -1,4 +1,4 @@
-#######################################################################################################################
+###############################################################################
 # Add the source subdirectories
 add_subdirectory(applications)
 add_subdirectory(dsp)
@@ -22,26 +22,38 @@ elseif(${CMAKE_SYSTEM_NAME} MATCHES "Linux|FreeBSD")
 elseif(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
 endif()
 
-#######################################################################################################################
+###############################################################################
 # bring in the global properties
 get_property(${PROJECT_NAME}_SOURCE GLOBAL PROPERTY SRCS_LIST)
 get_property(${PROJECT_NAME}_UI_SOURCE GLOBAL PROPERTY UI_SRCS_LIST)
 
-
-#######################################################################################################################
+###############################################################################
 # Process the UI files
-QT5_WRAP_UI(UIS_HDRS
-    ${${PROJECT_NAME}_UI_SOURCE}
-)
+if(Qt6_FOUND)
+    QT_WRAP_UI(UIS_HDRS
+        ${${PROJECT_NAME}_UI_SOURCE}
+    )
+else()
+    QT5_WRAP_UI(UIS_HDRS
+        ${${PROJECT_NAME}_UI_SOURCE}
+    )
+endif()
 
-#######################################################################################################################
+###############################################################################
 # Process the resources
-QT5_ADD_RESOURCES(RESOURCES_LIST
-    ../resources/icons.qrc
-    ../resources/textfiles.qrc
-)
+if(Qt6_FOUND)
+    QT_ADD_RESOURCES(RESOURCES_LIST
+        ../resources/icons.qrc
+        ../resources/textfiles.qrc
+    )
+else()
+    QT5_ADD_RESOURCES(RESOURCES_LIST
+        ../resources/icons.qrc
+        ../resources/textfiles.qrc
+    )
+endif()
 
-########################################################################
+###############################################################################
 # Resource file - adds an icon to GQRX executable
 if (WIN32)
     set(ICON_SOURCE ${CMAKE_SOURCE_DIR}/resources/icons/gqrx.ico)
@@ -54,23 +66,39 @@ if (WIN32)
     list(APPEND RESOURCES_LIST ${RES_FILES})
 endif(WIN32)
 
-#######################################################################################################################
+###############################################################################
 # Build the program
 add_executable(${PROJECT_NAME} ${${PROJECT_NAME}_SOURCE} ${UIS_HDRS} ${RESOURCES_LIST})
-set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 14)
-# The pulse libraries are only needed on Linux. On other platforms they will not be found, so having them here is fine.
+if(Qt6_FOUND)
+    set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 17)
+else()
+    set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 14)
+endif()
+# The pulse libraries are only needed on Linux. On other platforms they will
+# not be found, so having them here is fine.
+
+if(Qt6_FOUND)
+    target_link_libraries(${PROJECT_NAME}
+        Qt6::Core
+        Qt6::Network
+        Qt6::Widgets
+        Qt6::Svg
+        Qt6::SvgWidgets
+    )
+else()
+    target_link_libraries(${PROJECT_NAME}
+        Qt5::Core
+        Qt5::Network
+        Qt5::Widgets
+        Qt5::Svg
+    )
+endif()
+
 target_link_libraries(${PROJECT_NAME}
-    Qt5::Core
-    Qt5::Network
-    Qt5::Widgets
-    Qt5::Svg
-    ${Boost_LIBRARIES}
-    ${GNURADIO_ALL_LIBRARIES}
     ${GNURADIO_OSMOSDR_LIBRARIES}
     ${PULSEAUDIO_LIBRARY}
     ${PULSE-SIMPLE}
     ${PORTAUDIO_LIBRARIES}
-    ${VOLK_LIBRARIES}
 )
 
 if(NOT Gnuradio_VERSION VERSION_LESS "3.10")
@@ -91,6 +119,12 @@ elseif(NOT Gnuradio_VERSION VERSION_LESS "3.8")
         gnuradio::gnuradio-filter
         gnuradio::gnuradio-audio
         Volk::volk
+    )
+else()
+    target_link_libraries(${PROJECT_NAME}
+        ${Boost_LIBRARIES}
+        ${GNURADIO_ALL_LIBRARIES}
+        ${VOLK_LIBRARIES}
     )
 endif()
 

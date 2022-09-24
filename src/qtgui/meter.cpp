@@ -119,7 +119,7 @@ void CMeter::setLevel(float dbfs)
     float level = m_dBFS;
     float alpha  = dbfs < level ? ALPHA_DECAY : ALPHA_RISE;
     m_dBFS -= alpha * (level - dbfs);
-    m_Siglevel = (int)((level - MIN_DB) * m_pixperdb);
+    m_Siglevel = (level - MIN_DB) * m_pixperdb;
 
     draw();
 }
@@ -168,20 +168,18 @@ void CMeter::draw()
     qreal marg = (qreal) w * CTRL_MARGIN;
     qreal ht = (qreal) h * CTRL_NEEDLE_TOP;
     qreal x = marg + m_Siglevel;
-    QPoint pts[3];
-    pts[0].setX(x);
-    pts[0].setY(ht + 2);
-    pts[1].setX(x - 6);
-    pts[1].setY(hline + 8);
-    pts[2].setX(x + 6);
-    pts[2].setY(hline + 8);
 
-    painter.setBrush(QBrush(QColor(0, 190, 0, 255)));
-    painter.setOpacity(1.0);
+    if (m_Siglevel > 0.0f)
+    {
+        QColor color(0, 190, 0, 255);
+        QPen pen(color);
+        pen.setJoinStyle(Qt::MiterJoin);
+        painter.setPen(pen);
+        painter.setBrush(QBrush(color));
+        painter.setOpacity(1.0);
 
-    // Qt 4.8+ has a 1-pixel error (or they fixed line drawing)
-    // see http://stackoverflow.com/questions/16990326
-    painter.drawRect(marg - 1, ht + 1, x - marg, 6);
+        painter.drawRect(QRectF(marg, ht + 2, x - marg, 4));
+    }
 
     if (m_SqlLevel > 0.0f)
     {

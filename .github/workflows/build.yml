@@ -5,13 +5,46 @@ on: [push]
 jobs:
   appimage:
     name: AppImage
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
+    container:
+      image: "ubuntu:18.04"
+      env:
+        DEBIAN_FRONTEND: noninteractive
+        APPIMAGE_EXTRACT_AND_RUN: "1"
     steps:
       - name: Install dependencies
         run: |
-          sudo add-apt-repository -y ppa:gnuradio/gnuradio-releases
-          sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends cmake qt5-default qt5-gtk-platformtheme qttranslations5-l10n libqt5svg5-dev libboost-dev libpulse-dev portaudio19-dev liblog4cpp5-dev gnuradio-dev libairspy-dev libairspyhf-dev libfreesrp-dev libhackrf-dev librtlsdr-dev libsoapysdr-dev soapysdr-module-remote libuhd-dev liborc-0.4-dev libhidapi-dev
+          apt-get update -qq
+          apt-get install -y --no-install-recommends software-properties-common
+          add-apt-repository -y ppa:gnuradio/gnuradio-releases
+          add-apt-repository -y ppa:git-core/ppa
+          apt-get install -y --no-install-recommends \
+            git \
+            build-essential \
+            autoconf \
+            automake \
+            cmake \
+            libtool \
+            wget \
+            qt5-default \
+            qt5-gtk-platformtheme \
+            qttranslations5-l10n \
+            libqt5svg5-dev \
+            libboost-dev \
+            libpulse-dev \
+            portaudio19-dev \
+            liblog4cpp5-dev \
+            gnuradio-dev \
+            libairspy-dev \
+            libairspyhf-dev \
+            libfreesrp-dev \
+            libhackrf-dev \
+            librtlsdr-dev \
+            libsoapysdr-dev \
+            soapysdr-module-remote \
+            libuhd-dev \
+            liborc-0.4-dev \
+            libhidapi-dev
 
           cd /tmp
           git clone https://github.com/Nuand/bladeRF.git
@@ -19,9 +52,9 @@ jobs:
           mkdir build
           cd build
           cmake -DCMAKE_INSTALL_PREFIX=/usr ..
-          make
-          sudo make install
-          sudo ldconfig
+          make -j4
+          make install
+          ldconfig
 
           cd /tmp
           git clone https://github.com/dl1ksv/gr-fcdproplus.git
@@ -29,49 +62,53 @@ jobs:
           mkdir build
           cd build
           cmake -DCMAKE_INSTALL_PREFIX=/usr ..
-          make
-          sudo make install
-          sudo ldconfig
+          make -j4
+          make install
+          ldconfig
 
           cd /tmp
-          git clone git://git.osmocom.org/libosmo-dsp
+          git clone https://gitea.osmocom.org/sdr/libosmo-dsp.git
           cd libosmo-dsp
           autoreconf -i
           ./configure --prefix=/usr
-          make
-          sudo make install
-          sudo ldconfig
+          make -j4
+          make install
+          ldconfig
 
           cd /tmp
-          git clone git://git.osmocom.org/gr-iqbal
+          git clone https://gitea.osmocom.org/sdr/gr-iqbal.git
           cd gr-iqbal
           git checkout gr3.8
           mkdir build
           cd build
           cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_MODULES_DIR=/usr/lib/x86_64-linux-gnu/cmake ..
-          make
-          sudo make install
-          sudo ldconfig
+          make -j4
+          make install
+          ldconfig
 
           cd /tmp
-          git clone git://git.osmocom.org/gr-osmosdr
+          git clone https://gitea.osmocom.org/sdr/gr-osmosdr.git
           cd gr-osmosdr
           git checkout gr3.8
           mkdir build
           cd build
-          cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_MODULES_DIR=/usr/lib/x86_64-linux-gnu/cmake ..
-          make
-          sudo make install
-          sudo ldconfig
+          cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_MODULES_DIR=/usr/lib/x86_64-linux-gnu/cmake -DENABLE_PYTHON=False ..
+          make -j4
+          make install
+          ldconfig
       - name: Checkout code
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
       - name: Configure
-        run: mkdir build && cd build && cmake ..
+        run: |
+          git config --global --add safe.directory $GITHUB_WORKSPACE
+          mkdir build
+          cd build
+          cmake ..
       - name: Compile
         working-directory: build
-        run: make
+        run: make -j4
       - name: Build AppImage
         run: ./appimage.sh
       - name: Save artifact
@@ -86,19 +123,9 @@ jobs:
       - name: Install dependencies
         run: |
           brew update
-          brew install --HEAD --build-from-source dylibbundler portaudio
-          brew install airspy boost gnuradio hackrf libbladerf librtlsdr libserialport pybind11 uhd
+          brew install airspy airspyhf boost dylibbundler gnuradio hackrf libbladerf librtlsdr libserialport portaudio pybind11 uhd qt@6
           brew tap pothosware/homebrew-pothos
           brew install soapysdr soapyremote
-
-          cd /tmp
-          git clone https://github.com/airspy/airspyhf.git
-          cd airspyhf
-          mkdir build
-          cd build
-          cmake ..
-          make
-          make install
 
           cd /tmp
           git clone https://github.com/analogdevicesinc/libiio.git
@@ -107,6 +134,7 @@ jobs:
           mkdir build
           cd build
           cmake ..
+          make -j4
           sudo make install
 
           cd /tmp
@@ -115,6 +143,7 @@ jobs:
           mkdir build
           cd build
           cmake ..
+          make -j4
           sudo make install
 
           cd /tmp
@@ -123,6 +152,7 @@ jobs:
           mkdir build
           cd build
           cmake ..
+          make -j4
           make install
 
           cd /tmp
@@ -136,21 +166,22 @@ jobs:
           install_name_tool -change @rpath/ad9361.framework/Versions/0.2/ad9361 /usr/local/lib/libad9361.dylib /usr/local/lib/SoapySDR/modules0.*/libPlutoSDRSupport.so
 
           cd /tmp
-          git clone git://git.osmocom.org/gr-iqbal
+          git clone https://gitea.osmocom.org/sdr/gr-iqbal.git
           cd gr-iqbal
           git submodule update --init --recursive
           mkdir build
           cd build
           cmake ..
+          make -j4
           make install
 
           cd /tmp
-          git clone git://git.osmocom.org/gr-osmosdr
+          git clone https://gitea.osmocom.org/sdr/gr-osmosdr.git
           cd gr-osmosdr
           mkdir build
           cd build
-          cmake ..
-          LIBRARY_PATH=/usr/local/opt/icu4c/lib make
+          cmake -DCMAKE_CXX_FLAGS=-Wno-register ..
+          LIBRARY_PATH=/usr/local/opt/icu4c/lib make -j4
           make install
       - name: Install Apple certificate
         env:
@@ -177,7 +208,7 @@ jobs:
         run: mkdir build && cd build && cmake ..
       - name: Compile
         working-directory: build
-        run: make
+        run: make -j4
       - name: Build app bundle
         run: ./macos_bundle.sh
       - name: Notarize app bundle

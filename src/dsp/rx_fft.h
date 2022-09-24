@@ -28,11 +28,15 @@
 #include <gnuradio/fft/fft.h>
 #include <gnuradio/filter/firdes.h>       /* contains enum win_type */
 #include <gnuradio/gr_complex.h>
-#include <boost/circular_buffer.hpp>
+#include <gnuradio/buffer.h>
+#if GNURADIO_VERSION >= 0x031000
+#include <gnuradio/buffer_reader.h>
+#endif
 #include <chrono>
 
 
 #define MAX_FFT_SIZE 1048576
+#define AUDIO_BUFFER_SIZE 65536
 
 class rx_fft_c;
 class rx_fft_f;
@@ -106,10 +110,11 @@ private:
 #endif
     std::vector<float>  d_window; /*! FFT window taps. */
 
-    boost::circular_buffer<gr_complex> d_cbuf; /*! buffer to accumulate samples. */
+    gr::buffer_sptr d_writer;
+    gr::buffer_reader_sptr d_reader;
     std::chrono::time_point<std::chrono::steady_clock> d_lasttime;
 
-    void do_fft(unsigned int size);
+    void apply_window(unsigned int size);
     void set_params();
 
 };
@@ -175,10 +180,11 @@ private:
 #endif
     std::vector<float>  d_window; /*! FFT window taps. */
 
-    boost::circular_buffer<float> d_cbuf; /*! buffer to accumulate samples. */
+    gr::buffer_sptr d_writer;
+    gr::buffer_reader_sptr d_reader;
     std::chrono::time_point<std::chrono::steady_clock> d_lasttime;
 
-    void do_fft(unsigned int size);
+    void apply_window(unsigned int size);
 
 };
 

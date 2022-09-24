@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 3.2)
 project(gqrx)
 set(${PROJECT_NAME}_MAJOR "2")
 set(${PROJECT_NAME}_MINOR "15")
-set(${PROJECT_NAME}_PATCH "1")
+set(${PROJECT_NAME}_PATCH "9")
 set(IS_RELEASE FALSE)
 
 if(IS_RELEASE)
@@ -102,9 +102,13 @@ endfunction(add_source_files)
 
 if(APPLE AND EXISTS /usr/local/opt/qt5)
     # Homebrew installs Qt5 (up to at least 5.9.1) in
-    # /usr/local/qt5, ensure it can be found by CMake since
+    # /usr/local/opt/qt5, ensure it can be found by CMake since
     # it is not in the default /usr/local prefix.
     list(APPEND CMAKE_PREFIX_PATH "/usr/local/opt/qt5")
+endif()
+
+if(APPLE AND EXISTS /usr/local/opt/qt6)
+    list(APPEND CMAKE_PREFIX_PATH "/usr/local/opt/qt6")
 endif()
 
 if(APPLE AND EXISTS /usr/local/opt/icu4c/lib)
@@ -117,20 +121,20 @@ else()
 endif()
 
 # 3rd Party Dependency Stuff
-find_package(Qt5 COMPONENTS Core Network Widgets Svg REQUIRED)
+find_package(Qt6 QUIET COMPONENTS Core Network Widgets Svg SvgWidgets)
+if(NOT Qt6_FOUND)
+    find_package(Qt5 REQUIRED COMPONENTS Core Network Widgets Svg)
+endif()
 include(FindPkgConfig)
 find_package(Gnuradio-osmosdr REQUIRED)
 
 set(GR_REQUIRED_COMPONENTS RUNTIME ANALOG AUDIO BLOCKS DIGITAL FILTER FFT PMT)
 find_package(Gnuradio REQUIRED COMPONENTS analog audio blocks digital filter fft network)
-if(Gnuradio_VERSION VERSION_LESS "3.8")
-    find_package(Volk)
-endif()
-
 if(NOT Gnuradio_FOUND)
     message(FATAL_ERROR "GnuRadio Runtime required to compile gqrx")
 endif()
 
+find_package(Volk)
 
 # Pass the GNU Radio version as 0xMMNNPP BCD.
 math(EXPR GNURADIO_BCD_VERSION
@@ -244,17 +248,33 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 # Finish configuring compiler / linker settings & flags
 include_directories(
     ${CMAKE_SOURCE_DIR}/include
-    ${Boost_INCLUDE_DIRS}
-    ${GNURADIO_RUNTIME_INCLUDE_DIRS}
     ${GNURADIO_OSMOSDR_INCLUDE_DIRS}
 )
 
 link_directories(
-    ${Boost_LIBRARY_DIRS}
     ${GNURADIO_RUNTIME_LIBRARY_DIRS}
     ${ICU4C_LIBRARY_DIRS}
 )
 
+if(Gnuradio_VERSION VERSION_LESS "3.8")
+    include_directories(
+        ${Boost_INCLUDE_DIRS}
+        ${GNURADIO_RUNTIME_INCLUDE_DIRS}
+    )
+
+    link_directories(
+        ${Boost_LIBRARY_DIRS}
+    )
+endif()
+
+# Install desktop
+install(FILES dk.gqrx.gqrx.desktop DESTINATION share/applications)
+
+# Install appstream / metainfo file
+install(FILES dk.gqrx.gqrx.appdata.xml DESTINATION share/metainfo)
+
+# Install icon
+install(FILES resources/icons/gqrx.svg DESTINATION share/icons/hicolor/scalable/apps)
 
 # Add subdirectories
 add_subdirectory(src)

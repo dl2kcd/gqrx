@@ -31,7 +31,8 @@
 
 Afsk1200Win::Afsk1200Win(QWidget *parent) :
     QMainWindow(parent),
-    ui(new Ui::Afsk1200Win)
+    ui(new Ui::Afsk1200Win),
+    tmpbuf(CORRLEN, 0.0)
 {
     ui->setupUi(this);
 
@@ -61,21 +62,14 @@ Afsk1200Win::~Afsk1200Win()
 /*! \brief Process new set of samples. */
 void Afsk1200Win::process_samples(float *buffer, int length)
 {
-    int overlap = 18;
-    int i;
-
-    for (i = 0; i < length; i++) {
-        tmpbuf.append(buffer[i]);
+    for (int i = 0; i < length; i++) {
+        tmpbuf.push_back(buffer[i]);
     }
 
     decoder->demod(tmpbuf.data(), length);
 
     /* clear tmpbuf and store "overlap" */
-    tmpbuf.clear();
-    for (i = length-overlap; i < length; i++) {
-        tmpbuf.append(buffer[i]);
-    }
-
+    tmpbuf.erase(tmpbuf.begin(), tmpbuf.begin() + length);
 }
 
 
@@ -135,7 +129,7 @@ void Afsk1200Win::on_actionInfo_triggered()
                           "eliminating the need to mess with virtual or real audio cables. "
                           "It can decode AX.25 packets and displays the decoded packets in a text view.</p>"
                           "<p>The decoder is based on Qtmm, which is available for Linux, Mac and Windows "
-                          "at <a href='http://qtmm.sf.net/'>http://qtmm.sf.net</a>.</p>"
+                          "at <a href='https://sourceforge.net/projects/qtmm/'>https://sourceforge.net/projects/qtmm/</a>.</p>"
                           ).arg(VERSION));
 
 }

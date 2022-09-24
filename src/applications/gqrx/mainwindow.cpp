@@ -142,12 +142,12 @@ MainWindow::MainWindow(const QString& cfgfile, bool edit_conf, QWidget *parent) 
     uiDockBookmarks = new DockBookmarks(this);
 
     // setup some toggle view shortcuts
-    uiDockInputCtl->toggleViewAction()->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_J));
-    uiDockRxOpt->toggleViewAction()->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_R));
-    uiDockFft->toggleViewAction()->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_F));
-    uiDockAudio->toggleViewAction()->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_A));
-    uiDockBookmarks->toggleViewAction()->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_B));
-    ui->mainToolBar->toggleViewAction()->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_T));
+    uiDockInputCtl->toggleViewAction()->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_J));
+    uiDockRxOpt->toggleViewAction()->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_R));
+    uiDockFft->toggleViewAction()->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_F));
+    uiDockAudio->toggleViewAction()->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_A));
+    uiDockBookmarks->toggleViewAction()->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_B));
+    ui->mainToolBar->toggleViewAction()->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_T));
 
     /* frequency setting shortcut */
     auto *freq_shortcut = new QShortcut(QKeySequence(Qt::Key_F), this);
@@ -283,13 +283,12 @@ MainWindow::MainWindow(const QString& cfgfile, bool edit_conf, QWidget *parent) 
     // I/Q playback
     connect(iq_tool, SIGNAL(startRecording(QString)), this, SLOT(startIqRecording(QString)));
     connect(iq_tool, SIGNAL(stopRecording()), this, SLOT(stopIqRecording()));
-    connect(iq_tool, SIGNAL(startPlayback(QString,float)), this, SLOT(startIqPlayback(QString,float)));
+    connect(iq_tool, SIGNAL(startPlayback(QString,float,qint64)), this, SLOT(startIqPlayback(QString,float,qint64)));
     connect(iq_tool, SIGNAL(stopPlayback()), this, SLOT(stopIqPlayback()));
     connect(iq_tool, SIGNAL(seek(qint64)), this,SLOT(seekIqFile(qint64)));
 
     // remote control
     connect(remote, SIGNAL(newRDSmode(bool)), uiDockRDS, SLOT(setRDSmode(bool)));
-    connect(uiDockRDS, SIGNAL(rdsDecoderToggled(bool)), remote, SLOT(setRDSstatus(bool)));
     connect(remote, SIGNAL(newFilterOffset(qint64)), this, SLOT(setFilterOffset(qint64)));
     connect(remote, SIGNAL(newFilterOffset(qint64)), uiDockRxOpt, SLOT(setFilterOffset(qint64)));
     connect(remote, SIGNAL(newFrequency(qint64)), ui->freqCtrl, SLOT(setFrequency(qint64)));
@@ -459,7 +458,7 @@ bool MainWindow::loadConfig(const QString& cfgfile, bool check_crash,
     {
         if (m_settings->value("crashed", false).toBool())
         {
-            qDebug() << "Crash guard triggered!" << endl;
+            qDebug() << "Crash guard triggered!";
             auto* askUserAboutConfig =
                     new QMessageBox(QMessageBox::Warning, tr("Crash Detected!"),
                                     tr("<p>Gqrx has detected problems with the current configuration. "
@@ -519,14 +518,7 @@ bool MainWindow::loadConfig(const QString& cfgfile, bool check_crash,
         }
 
         // Update window title
-        QRegExp regexp(R"('([a-zA-Z0-9 \-\_\/\.\,\(\)]+)')");
-        QString devlabel;
-        if (regexp.indexIn(indev, 0) != -1)
-            devlabel = regexp.cap(1);
-        else
-            devlabel = indev; //"Unknown";
-
-        setWindowTitle(QString("Gqrx %1 - %2").arg(VERSION).arg(devlabel));
+        setWindowTitle(QString("Gqrx %1 - %2").arg(VERSION).arg(indev));
 
         // Add available antenna connectors to the UI
         std::vector<std::string> antennas = rx->get_antennas();
@@ -1089,6 +1081,10 @@ void MainWindow::selectDemod(int mode_idx)
             stopAudioRec();
             uiDockAudio->setAudioRecButtonState(false);
         }
+        if (dec_afsk1200 != nullptr)
+        {
+            dec_afsk1200->close();
+        }
         rx->set_demod(receiver::RX_DEMOD_OFF);
         click_res = 1000;
         break;
@@ -1448,8 +1444,8 @@ void MainWindow::rdsTimeout()
 
     rx->get_rds_data(buffer, num);
     while(num!=-1) {
-        rx->get_rds_data(buffer, num);
         uiDockRDS->updateRDS(QString::fromStdString(buffer), num);
+        rx->get_rds_data(buffer, num);
     }
 }
 
@@ -1465,7 +1461,7 @@ void MainWindow::startAudioRec(const QString& filename)
         msg_box.setIcon(QMessageBox::Critical);
         msg_box.setText(tr("Recording audio requires a demodulator.\n"
                            "Currently, demodulation is switched off "
-                           "(Mode->Demod off)."));
+                           "(Mode->Demod Off)."));
         msg_box.exec();
         uiDockAudio->setAudioRecButtonState(false);
     }
@@ -1588,7 +1584,7 @@ void MainWindow::stopIqRecording()
         ui->statusBar->showMessage(tr("I/Q data recoding stopped"), 5000);
 }
 
-void MainWindow::startIqPlayback(const QString& filename, float samprate)
+void MainWindow::startIqPlayback(const QString& filename, float samprate, qint64 center_freq)
 {
     if (ui->actionDSP->isChecked())
     {
@@ -1599,13 +1595,16 @@ void MainWindow::startIqPlayback(const QString& filename, float samprate)
     storeSession();
 
     auto sri = (int)samprate;
+    auto cf  = center_freq;
+    double current_offset = rx->get_filter_offset();
     QString escapedFilename = receiver::escape_filename(filename.toStdString()).c_str();
-    auto devstr = QString("file=%1,rate=%2,throttle=true,repeat=false")
-            .arg(escapedFilename).arg(sri);
+    auto devstr = QString("file=%1,rate=%2,freq=%3,throttle=true,repeat=false")
+            .arg(escapedFilename).arg(sri).arg(cf);
 
     qDebug() << __func__ << ":" << devstr;
 
     rx->set_input_device(devstr.toStdString());
+    updateHWFrequencyRange(false);
 
     // sample rate
     auto actual_rate = rx->set_input_rate(samprate);
@@ -1616,6 +1615,11 @@ void MainWindow::startIqPlayback(const QString& filename, float samprate)
     uiDockRxOpt->setFilterOffsetRange((qint64)(actual_rate));
     ui->plotter->setSampleRate(actual_rate);
     ui->plotter->setSpanFreq((quint32)actual_rate);
+    if (std::abs(current_offset) > actual_rate / 2)
+        on_plotter_newDemodFreq(center_freq, 0);
+    else
+        on_plotter_newDemodFreq(center_freq + current_offset, current_offset);
+
     remote->setBandwidth(actual_rate);
 
     // FIXME: would be nice with good/bad status
@@ -1659,6 +1663,14 @@ void MainWindow::stopIqPlayback()
 
     // restore frequency, gain, etc...
     uiDockInputCtl->readSettings(m_settings);
+    bool centerOK = false;
+    bool offsetOK = false;
+    qint64 oldCenter = m_settings->value("input/frequency", 0).toLongLong(&centerOK);
+    qint64 oldOffset = m_settings->value("receiver/offset", 0).toLongLong(&offsetOK);
+    if (centerOK && offsetOK)
+    {
+        on_plotter_newDemodFreq(oldCenter, oldOffset);
+    }
 
     if (ui->actionDSP->isChecked())
     {
@@ -2057,7 +2069,16 @@ void MainWindow::on_actionRemoteConfig_triggered()
  */
 void MainWindow::on_actionAFSK1200_triggered()
 {
-
+    if (!d_have_audio)
+    {
+        QMessageBox msg_box;
+        msg_box.setIcon(QMessageBox::Critical);
+        msg_box.setText(tr("AFSK1200 decoder requires a demodulator.\n"
+                           "Currently, demodulation is switched off "
+                           "(Mode->Demod Off)."));
+        msg_box.exec();
+        return;
+    }
     if (dec_afsk1200 != nullptr)
     {
         qDebug() << "AFSK1200 decoder already active.";
@@ -2139,6 +2160,7 @@ void MainWindow::setRdsDecoder(bool checked)
         rx->stop_rds_decoder();
         rds_timer->stop();
     }
+    remote->setRDSstatus(checked);
 }
 
 void MainWindow::onBookmarkActivated(qint64 freq, const QString& demod, int bandwidth)
@@ -2201,12 +2223,12 @@ void MainWindow::setPassband(int bandwidth)
 /** Launch Gqrx google group website. */
 void MainWindow::on_actionUserGroup_triggered()
 {
-    auto res = QDesktopServices::openUrl(QUrl("https://groups.google.com/forum/#!forum/gqrx",
+    auto res = QDesktopServices::openUrl(QUrl("https://groups.google.com/g/gqrx",
                                               QUrl::TolerantMode));
     if (!res)
         QMessageBox::warning(this, tr("Error"),
                              tr("Failed to open website:\n"
-                                "https://groups.google.com/forum/#!forum/gqrx"),
+                                "https://groups.google.com/g/gqrx"),
                              QMessageBox::Close);
 }
 
@@ -2301,10 +2323,10 @@ void MainWindow::on_actionAbout_triggered()
 {
     QMessageBox::about(this, tr("About Gqrx"),
         tr("<p>This is Gqrx %1</p>"
-           "<p>Copyright (C) 2011-2020 Alexandru Csete & contributors.</p>"
+           "<p>Copyright (C) 2011-2022 Alexandru Csete & contributors.</p>"
            "<p>Gqrx is a software defined radio (SDR) receiver powered by "
-           "<a href='http://www.gnuradio.org/'>GNU Radio</a> and the Qt toolkit. "
-           "<p>Gqrx uses the <a href='https://osmocom.org/projects/sdr/wiki/GrOsmoSDR'>GrOsmoSDR</a> "
+           "<a href='https://www.gnuradio.org/'>GNU Radio</a> and the Qt toolkit. "
+           "<p>Gqrx uses the <a href='https://osmocom.org/projects/gr-osmosdr/wiki/GrOsmoSDR'>GrOsmoSDR</a> "
            "input source block and works with any input device supported by it, including "
            "Funcube Dongle, RTL-SDR, Airspy, HackRF, RFSpace, BladeRF and USRP receivers."
            "</p>"
@@ -2312,7 +2334,7 @@ void MainWindow::on_actionAbout_triggered()
            "<a href='https://gqrx.dk/'>Gqrx website</a>."
            "</p>"
            "<p>"
-           "Gqrx is licensed under the <a href='http://www.gnu.org/licenses/gpl.html'>GNU General Public License</a>."
+           "Gqrx is licensed under the <a href='https://www.gnu.org/licenses/gpl-3.0.html'>GNU General Public License</a>."
            "</p>").arg(VERSION));
 }
 
@@ -2331,7 +2353,7 @@ void MainWindow::on_actionAddBookmark_triggered()
 {
     bool ok=false;
     QString name;
-    QString tags; // list of tags separated by comma
+    QStringList tags;
 
     // Create and show the Dialog for a new Bookmark.
     // Write the result into variable 'name'.
@@ -2369,7 +2391,7 @@ void MainWindow::on_actionAddBookmark_triggered()
         if (ok)
         {
             name = textfield->text();
-            tags = taglist->getSelectedTagsAsString();
+            tags = taglist->getSelectedTags();
             qDebug() << "Tags: " << tags;
         }
         else
@@ -2389,14 +2411,13 @@ void MainWindow::on_actionAddBookmark_triggered()
         info.bandwidth = ui->plotter->getFilterBw();
         info.modulation = uiDockRxOpt->currentDemodAsString();
         info.name=name;
-        auto listTags = tags.split(",",QString::SkipEmptyParts);
         info.tags.clear();
-        if (listTags.empty())
+        if (tags.empty())
             info.tags.append(&Bookmarks::Get().findOrAddTag(""));
 
 
-        for (i = 0; i < listTags.size(); ++i)
-            info.tags.append(&Bookmarks::Get().findOrAddTag(listTags[i]));
+        for (i = 0; i < tags.size(); ++i)
+            info.tags.append(&Bookmarks::Get().findOrAddTag(tags[i]));
 
         Bookmarks::Get().add(info);
         uiDockBookmarks->updateTags();
