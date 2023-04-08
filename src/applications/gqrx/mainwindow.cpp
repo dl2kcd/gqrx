@@ -153,6 +153,10 @@ MainWindow::MainWindow(const QString& cfgfile, bool edit_conf, QWidget *parent) 
     auto *freq_shortcut = new QShortcut(QKeySequence(Qt::Key_F), this);
     QObject::connect(freq_shortcut, &QShortcut::activated, this, &MainWindow::frequencyFocusShortcut);
 
+    // zero cursor (rx filter offset)
+    auto *rx_offset_zero_shortcut = new QShortcut(QKeySequence(Qt::Key_Z), this);
+    QObject::connect(rx_offset_zero_shortcut, &QShortcut::activated, this, &MainWindow::rxOffsetZeroShortcut);
+
     setCorner(Qt::TopLeftCorner, Qt::LeftDockWidgetArea);
     setCorner(Qt::TopRightCorner, Qt::RightDockWidgetArea);
     setCorner(Qt::BottomLeftCorner, Qt::BottomDockWidgetArea);
@@ -2323,7 +2327,7 @@ void MainWindow::on_actionAbout_triggered()
 {
     QMessageBox::about(this, tr("About Gqrx"),
         tr("<p>This is Gqrx %1</p>"
-           "<p>Copyright (C) 2011-2022 Alexandru Csete & contributors.</p>"
+           "<p>Copyright (C) 2011-2023 Alexandru Csete & contributors.</p>"
            "<p>Gqrx is a software defined radio (SDR) receiver powered by "
            "<a href='https://www.gnuradio.org/'>GNU Radio</a> and the Qt toolkit. "
            "<p>Gqrx uses the <a href='https://osmocom.org/projects/gr-osmosdr/wiki/GrOsmoSDR'>GrOsmoSDR</a> "
@@ -2434,4 +2438,9 @@ void MainWindow::updateClusterSpots()
 void MainWindow::frequencyFocusShortcut()
 {
     ui->freqCtrl->setFrequencyFocus();
+}
+
+void MainWindow::rxOffsetZeroShortcut()
+{
+    uiDockRxOpt->setFilterOffset(0);
 }

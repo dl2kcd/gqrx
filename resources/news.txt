@@ -1,4 +1,16 @@
 
+   2.15.10: In progress...
+
+       NEW: Restore FFT zoom level between sessions.
+       NEW: Restore peak detect & peak hold between sessions.
+       NEW: "Z" keyboard shortcut sets frequency offset to zero.
+     FIXED: Remove empty frame from bottom of I/Q tool window.
+     FIXED: Sudden scrolling of file list in I/Q tool window.
+     FIXED: Reset zoom slider after right click on panadapter / waterfall.
+  IMPROVED: AGC performance.
+  IMPROVED: Apply amplitude normalization to FFT window functions.
+
+
     2.15.9: Released April 9, 2022
 
        NEW: Qt 6 support.
