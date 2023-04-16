@@ -238,6 +238,7 @@ MainWindow::MainWindow(const QString& cfgfile, bool edit_conf, QWidget *parent) 
     connect(uiDockRxOpt, SIGNAL(sqlLevelChanged(double)), this, SLOT(setSqlLevel(double)));
     connect(uiDockRxOpt, SIGNAL(sqlAutoClicked()), this, SLOT(setSqlLevelAuto()));
     connect(uiDockAudio, SIGNAL(audioGainChanged(float)), this, SLOT(setAudioGain(float)));
+    connect(uiDockAudio, SIGNAL(audioGainChanged(float)), remote, SLOT(setAudioGain(float)));
     connect(uiDockAudio, SIGNAL(audioStreamingStarted(QString,int,bool)), this, SLOT(startAudioStream(QString,int,bool)));
     connect(uiDockAudio, SIGNAL(audioStreamingStopped()), this, SLOT(stopAudioStreaming()));
     connect(uiDockAudio, SIGNAL(audioRecStarted(QString)), this, SLOT(startAudioRec(QString)));
@@ -302,6 +303,7 @@ MainWindow::MainWindow(const QString& cfgfile, bool edit_conf, QWidget *parent) 
     connect(remote, SIGNAL(newMode(int)), uiDockRxOpt, SLOT(setCurrentDemod(int)));
     connect(remote, SIGNAL(newSquelchLevel(double)), this, SLOT(setSqlLevel(double)));
     connect(remote, SIGNAL(newSquelchLevel(double)), uiDockRxOpt, SLOT(setSquelchLevel(double)));
+    connect(remote, SIGNAL(newAudioGain(float)), uiDockAudio, SLOT(setAudioGainDb(float)));
     connect(uiDockRxOpt, SIGNAL(sqlLevelChanged(double)), remote, SLOT(setSquelchLevel(double)));
     connect(remote, SIGNAL(startAudioRecorderEvent()), uiDockAudio, SLOT(startAudioRecorder()));
     connect(remote, SIGNAL(stopAudioRecorderEvent()), uiDockAudio, SLOT(stopAudioRecorder()));
@@ -1103,6 +1105,7 @@ void MainWindow::selectDemod(int mode_idx)
 
     case DockRxOpt::MODE_AM:
         rx->set_demod(receiver::RX_DEMOD_AM);
+        rx->set_am_dcr(uiDockRxOpt->currentAmDcr());
         ui->plotter->setDemodRanges(-40000, -200, 200, 40000, true);
         uiDockAudio->setFftRange(0,6000);
         click_res = 100;
@@ -1110,6 +1113,8 @@ void MainWindow::selectDemod(int mode_idx)
 
     case DockRxOpt::MODE_AM_SYNC:
         rx->set_demod(receiver::RX_DEMOD_AMSYNC);
+        rx->set_amsync_dcr(uiDockRxOpt->currentAmsyncDcr());
+        rx->set_amsync_pll_bw(uiDockRxOpt->currentAmsyncPll());
         ui->plotter->setDemodRanges(-40000, -200, 200, 40000, true);
         uiDockAudio->setFftRange(0,6000);
         click_res = 100;
